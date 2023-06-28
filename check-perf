@@ -1,0 +1,86 @@
+#! /bin/env python
+
+import sqlite3
+
+import pandas as pd
+
+
+# TODO
+# * Add support for multiple pytest workers (via a tag)
+# * argparse stuff? --mem-threshold --time-threshold e.g.?
+# * Remote database connection (optional)
+# * option to query a separate database (which we want to not
+#   pollute the database) or to compare with a specific branch
+
+
+def main():
+    master_times = read_db("master.db")  # (actually query server)
+    new_times = read_db(".pymon")
+
+    joint_tests = list(set(master_times.index).intersection(new_times.index))
+
+    a = new_times.loc[joint_tests]
+    b = master_times.loc[joint_tests]
+
+    diff = (a[["TOTAL_TIME", "MEM_USAGE"]]-b[["TOTAL_TIME", "MEM_USAGE"]])/b[["TOTAL_TIME", "MEM_USAGE"]]
+
+    diff["TIME_PASS"] = diff["TOTAL_TIME"] < 0.1
+    diff["MEM_PASS"] = diff["MEM_USAGE"] < 0.1
+
+    time_fails = diff[diff["TIME_PASS"] == False]
+    mem_fails = diff[diff["MEM_PASS"] == False]
+
+    if len(time_fails) == 0 and len(mem_fails) == 0:
+        return  # yay
+
+    if len(time_fails) > 0:
+        print("These tests are too slow:")
+        # print(time_fails)
+        print("\n".join([f"{test_name} {diff['TOTAL_TIME'].loc[test_name]}" for test_name in time_fails.index]))
+    if len(mem_fails) > 0:
+        print("These tests use too much memory:")
+        print("\n".join(mem_fails.index))
+    exit(1)
+
+
+def read_db(dbname):
+    con = sqlite3.connect(dbname)
+    cur = con.cursor()
+    sessions = cur.execute('SELECT * FROM TEST_SESSIONS')
+
+    #FIXME in parallel (-n6) we need to pass a tag (--tag "xyz") to
+    # things because we get multiple sessions per pytest invocation, one
+    # per runner
+
+    # here we need to collect equivalent sessions together into one big df?
+    # select by tag - if the tag is the datetime then we can also sort with it
+
+    # 1. Give us the last 10 tags
+    # 2. Give us all of the session hashes for each tag
+    # 3. Give us the test metrics for these sessions
+
+    # it would be convenient to add the tag as a column to the final query
+
+
+    sessions_df = pd.read_sql('SELECT * FROM TEST_SESSIONS', con,
+            parse_dates={'RUN_DATE': {}})
+    df = pd.read_sql(
+        'SELECT SESSION_H,ITEM_FS_LOC,ITEM_VARIANT,TOTAL_TIME,CPU_USAGE,MEM_USAGE'
+        ' FROM TEST_METRICS',
+        # f' WHERE SESSION_H IN ({",".join("?"*len(prev_session_hashes))})',
+        con,
+        # params=prev_session_hashes,
+    )
+    df['TEST'] = df['ITEM_FS_LOC'] + '::' + df['ITEM_VARIANT']
+
+    # select the 10 last runs
+    sessions_df.sort_values("RUN_DATE", inplace=True)
+    selected_sessions = sessions_df["SESSION_H"][-10:]
+
+    test_means = df.groupby("TEST").mean()
+    return test_means
+
+
+
+if __name__ == "__main__":
+    main()
