@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ branch }}{% endblock %}
+{% block heading %}{{ branch }}{% endblock %}
+{% block content %}
+<!-- TABLE OF CONTENTS -->
+<div class="w3-cell-row">
+  <div class="w3-cell w3-container w3-white" style="width:50%">
+    <h2>TOC</h2>
+    <ul class="w3-ul">
+      {% for file in testpaths.keys() %}
+      <li class="w3-hover-black"><a href="#{{ file }}">{{ file }}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+<!-- TABLE OF GRAPHS -->
+{% for file in testpaths.keys() %}
+<!-- HEADING -->
+<div class="w3-row">
+  <div class="w3-full w3-container w3-black">
+    <h3>{{ file }}</h3>
+    <a id="{{ file }}" href="."></a>
+  </div>
+</div>
+  {% for row in testpaths[file]|batch(5, "") %}
+<div class="w3-cell-row w3-padding-16">
+    {% for test in row %}
+  <div class="w3-cell w3-cell-bottom w3-white" style="width:20%">
+    {% if test %}
+    <a href="../{{ branch_safe }}/{{ file }}::{{ test }}.svg">
+      <img src="../{{ branch_safe }}/{{ file }}::{{ test }}_thumb.png" style="width:95%"/>
+    </a>
+    {% endif %}
+<!--
+    <object data="../{{ branch_safe }}/{{ file }}::{{ test }}_time.svg" type="image/svg+xml"></object>
+-->
+  </div>
+    {% endfor %}
+</div>
+  {% endfor %}
+{% endfor %}
+{% endblock %}

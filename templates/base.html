@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../static/css/w3.css">
+  <link rel="stylesheet" href="../static/css/font-awesome.min.css">
+  <title>{% block title %}{% endblock %}</title>
+</head>
+<body class="w3-light-grey">
+  <header class="w3-container w3-teal">
+    <h1>{% block heading %}{% endblock %}</h1>
+  </header>
+  <div class="w3-container w3-teal w3-padding">Return to <a href="/">homepage</a></div>
+
+  <div class="w3-card w3-section w3-content w3-mobile w3-padding w3-white" style="max-width:1600px">
+    {% block content %}{% endblock %}
+  </div>
+
+  <footer class="w3-container w3-bottom w3-teal w3-tiny w3-right-align">
+    <a href="https://github.com/???">Source</a>
+  </footer>
+</body>
+</html>
